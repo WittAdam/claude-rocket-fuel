@@ -1,0 +1,21 @@
+#!/bin/sh
+# git-bash shim for Windows: Claude Code runs commands through git-bash, which can't run
+# codex.cmd (a .cmd file only PowerShell/cmd understand). This runs the real codex.exe
+# directly so arguments and stdin pass straight through.
+# Put this file (no extension) in a folder on git-bash's PATH, e.g. ~/bin.
+
+# 1) Codex desktop app: the hash folder changes on every app update, so find the newest.
+BIN_ROOT="$(cygpath -u "${LOCALAPPDATA:-$HOME/AppData/Local}")/OpenAI/Codex/bin"
+CODEX_EXE="$(ls -1dt "$BIN_ROOT"/*/codex.exe 2>/dev/null | head -1)"
+
+# 2) npm install: the real binary lives inside the package.
+if [ -z "$CODEX_EXE" ] && [ -n "$APPDATA" ]; then
+  NPM_ROOT="$(cygpath -u "$APPDATA")/npm/node_modules/@openai/codex"
+  CODEX_EXE="$(find "$NPM_ROOT" -name codex.exe 2>/dev/null | head -1)"
+fi
+
+if [ -z "$CODEX_EXE" ]; then
+  echo "codex shim: codex.exe not found (looked in $BIN_ROOT and the npm global folder)" >&2
+  exit 1
+fi
+exec "$CODEX_EXE" "$@"
